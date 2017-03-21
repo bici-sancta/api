@@ -1,0 +1,82 @@
+---
+title: "api_twitteR"
+author: "mcdevitt"
+date: "20 mars 2017"
+output: ioslides_presentation
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library("twitteR")
+library("ROAuth")
+
+library(tm)
+
+library(SnowballC)
+library(RWeka)
+library(rJava)
+library(RWekajars)
+
+library(wordcloud)
+library(RColorBrewer)
+
+#http://www.rdatamining.com/examples/text-mining
+
+```
+
+## API twitteR
+
+
+```{r code_block_1}
+
+consumer_key <- "B3xnIRK9Db10l9FbdODy0mVeu"
+consumer_secret <- "9G3j5Ly0mXPZJtSNqSfCUqvIpHeaTJ8pGnxN9pbdDvN02dNU5k"
+access_token <- "1238808620-FLbezo1vHkAoGLXYPr7TC9OIKfmFsI9YH2X4VyJ"
+access_secret <- "XjNniVY8kcZxeGTeu3XnCPCtqadQ2acntn7CAuXZsvtRG"
+
+setup_twitter_oauth(consumer_key, consumer_secret, access_token, access_secret)
+
+search.string <- "#madness"
+no.of.tweets <- 1000
+
+tweets <- searchTwitter(search.string,
+						n = no.of.tweets,
+#						since = '2017-03-13',
+#						until = '2017-03-20',
+						lang = "en")
+
+df <- do.call("rbind", lapply(tweets, as.data.frame))
+df$text<-iconv(enc2utf8(df$text),sub="byte")
+
+myCorpus <- Corpus(VectorSource(df$text))
+
+myCorpus <- tm_map(myCorpus, removePunctuation)
+myCorpus <- tm_map(myCorpus, removeNumbers)
+myCorpus <- tm_map(myCorpus, tolower)
+myCorpus <- tm_map(myCorpus, removeWords, stopwords("english"))
+
+dictCorpus <- myCorpus
+myCorpus <- tm_map(myCorpus, stemDocument)
+
+myDtm <- TermDocumentMatrix(myCorpus)
+m <- as.matrix(myDtm)
+
+# calculate the frequency of words
+v <- sort(rowSums(m), decreasing = TRUE)
+myNames <- names(v)
+k <- which(names(v)=="mad")
+myNames[k] <- "madness"
+
+dm <- data.frame(word = myNames, freq = v)
+
+pal <- brewer.pal(8, "Dark2")
+wordcloud(word = dm$word, 
+          freq = dm$freq,
+		  random.order = TRUE,
+          min.freq = 12,
+		  max.words = 500,
+          scale = c(4,0.8),
+          colors = pal)
+```
+

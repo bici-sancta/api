@@ -2,22 +2,19 @@
 title: "api_twitteR"
 author: "mcdevitt"
 date: "20 mars 2017"
-output: ioslides_presentation
+output:
+  slidy_presentation: default
 ---
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 
-library("twitteR")
-library("ROAuth")
 
 library(tm)
-
 library(SnowballC)
 library(RWeka)
 library(rJava)
 library(RWekajars)
-
 library(wordcloud)
 library(RColorBrewer)
 
@@ -27,13 +24,29 @@ library(RColorBrewer)
 
 ## API twitteR
 
+#### Getting Started
+1 : Create an Application with twitter, in order to create authentication keys
+Web-site : https://
 
-```{r code_block_1}
 
+
+```{r, echo = FALSE}
 consumer_key <- "B3xnIRK9Db10l9FbdODy0mVeu"
 consumer_secret <- "9G3j5Ly0mXPZJtSNqSfCUqvIpHeaTJ8pGnxN9pbdDvN02dNU5k"
 access_token <- "1238808620-FLbezo1vHkAoGLXYPr7TC9OIKfmFsI9YH2X4VyJ"
 access_secret <- "XjNniVY8kcZxeGTeu3XnCPCtqadQ2acntn7CAuXZsvtRG"
+```
+
+
+```{r code_block_1}
+
+library(twitteR)
+library(ROAuth)
+
+#consumer_key <- "B3xnIxXxXxXxXxXxXxXXyxyxyxyxyxeu"
+#consumer_secret <- "9G3j5xXxXxXxXxXxXxXXyxyxyxyxyxHeaTJ8pGnxN9pbdDvN02dNU5k"
+#access_token <- "123xXxXxXxXxXxXxXXyxyxyxyxyxFsI9YH2X4VyJ"
+#access_secret <- "XjNniVY8kcZXXxXxXxXxXxXxXxXXyxyxyxyxyx"
 
 setup_twitter_oauth(consumer_key, consumer_secret, access_token, access_secret)
 
@@ -44,13 +57,18 @@ tweets <- searchTwitter(search.string,
 						n = no.of.tweets,
 #						since = '2017-03-13',
 #						until = '2017-03-20',
+#						geocode = geo_code_dallas,
 						lang = "en")
 
 df <- do.call("rbind", lapply(tweets, as.data.frame))
-df$text<-iconv(enc2utf8(df$text),sub="byte")
 
+# ...	remove emojis and other weird characters
+df$text <- iconv(enc2utf8(df$text), sub = "byte")
+
+# ...	create text corpus
 myCorpus <- Corpus(VectorSource(df$text))
 
+# ...	clean up punctuation, numbers, typical words
 myCorpus <- tm_map(myCorpus, removePunctuation)
 myCorpus <- tm_map(myCorpus, removeNumbers)
 myCorpus <- tm_map(myCorpus, tolower)
@@ -59,6 +77,7 @@ myCorpus <- tm_map(myCorpus, removeWords, stopwords("english"))
 dictCorpus <- myCorpus
 myCorpus <- tm_map(myCorpus, stemDocument)
 
+#...	map to frequency matrix of terms
 myDtm <- TermDocumentMatrix(myCorpus)
 m <- as.matrix(myDtm)
 
@@ -68,8 +87,10 @@ myNames <- names(v)
 k <- which(names(v)=="mad")
 myNames[k] <- "madness"
 
+# ...	data frame with popular words and frequencies
 dm <- data.frame(word = myNames, freq = v)
 
+# ...	make the word cloud
 pal <- brewer.pal(8, "Dark2")
 wordcloud(word = dm$word, 
           freq = dm$freq,
@@ -78,5 +99,30 @@ wordcloud(word = dm$word,
 		  max.words = 500,
           scale = c(4,0.8),
           colors = pal)
+
 ```
 
+### __Top 20 Words in Twitter Search :__
+```{r}
+head(dm, 20)
+
+```
+
+
+
+
+```{r}
+
+# ...	CNN Breaking News tweets
+
+timeline <- userTimeline("cnnbrk", n = 100)
+
+cnn <- do.call("rbind", lapply(timeline, as.data.frame))
+
+plot(cnn$favoriteCount ~ cnn$created)
+
+sort_cnn <- cnn[order(-cnn$favoriteCount),]
+
+head(sort_cnn$text)
+
+```
